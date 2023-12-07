@@ -1,7 +1,9 @@
 package com.example.music_player
 
+import android.content.SharedPreferences
+
 class Songs: ArrayList<Song>() {
-    private var currentSongIndex: Int = 2
+    private var currentSongIndex: Int = 0
 
     fun getCurrentSongIndex(): Int {
         // Inputs: Author, Title
@@ -16,6 +18,6 @@ class Songs: ArrayList<Song>() {
     }
 
     override fun toString(): String {
-        return "${this[3]}"
+        return "${this[getCurrentSongIndex()]}"
     }
 }

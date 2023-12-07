@@ -42,7 +42,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/artist_name"
                 android:textColor="@color/black"
-                android:textSize="15sp" />
+                android:textSize="15sp"
+                android:textStyle="normal"/>
 
         </LinearLayout>
 

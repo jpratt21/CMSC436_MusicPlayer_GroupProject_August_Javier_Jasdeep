@@ -1,6 +1,9 @@
 package com.example.music_player
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -14,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.common.ConnectionResult
@@ -36,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ibPlayPause: ImageButton
     private lateinit var llCurrentPlaying: LinearLayout
     private lateinit var dbRef: DatabaseReference
-    private lateinit var player: ExoPlayer
     private lateinit var speedTracker: GPSSpeed
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,8 +54,12 @@ class MainActivity : AppCompatActivity() {
         tvCurrentArtistName = findViewById(R.id.tvCurrentArtistName)
         ibPlayPause = findViewById(R.id.ibPlayPause)
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
-        player = ExoPlayer.Builder(this).build()
         speedTracker = GPSSpeed(this)
+        PlayerManager.initializePlayer(this)
+
+        val pref: SharedPreferences =
+            this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
+        songList.setCurrentSongIndex(pref.getInt(CURRENT_SONG, DEFAULT_SONG))
 
         // Once songs are loaded
         getSongs { songList ->
@@ -64,15 +70,17 @@ class MainActivity : AppCompatActivity() {
                 .setUri(Uri.parse(songList[songList.getCurrentSongIndex()].getSongUrl()))
                 .setMimeType(MimeTypes.AUDIO_MP4)
                 .build()
-            player.setMediaItem(mediaItem)
+            PlayerManager.getPlayer().setMediaItem(mediaItem)
 
-            player.prepare()
+            PlayerManager.getPlayer().prepare()
+            PlayerManager.getPlayer().pause()
 
             // Make the current song clickable
             llCurrentPlaying.isClickable = true
             llCurrentPlaying.setOnClickListener {
                 val intent = Intent(this, MusicActivity::class.java)
-                startActivity(intent)
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, MUSIC_ACTIVITY_REQUEST_CODE)
             }
 
             // Check for location permissions
@@ -91,6 +99,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }.start()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        val pref : SharedPreferences =
+            this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
+
+        val editor : SharedPreferences.Editor = pref.edit()
+        editor.putInt(CURRENT_SONG, songList.getCurrentSongIndex())
+        editor.apply()
     }
 
     private fun getSongs(callback: (Songs) -> Unit) {
@@ -130,9 +148,6 @@ class MainActivity : AppCompatActivity() {
         tvLoadingData.visibility = View.GONE
         llCurrentPlaying.visibility = View.VISIBLE
 
-        // Get current song and update it
-        updateCurrentSong()
-
         // Update the visual list of songs
         val songAdapter = SongAdapter(songList)
         songRecyclerView.adapter = songAdapter
@@ -140,46 +155,79 @@ class MainActivity : AppCompatActivity() {
         // Sets a click listener for each of the songs to change the current songs
         songAdapter.setOnItemClickListener(object : SongAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
+
+                PlayerManager.getPlayer().pause()
+
                 Log.w("Main Activity", songList[position].toString())
+
                 songList.setCurrentSongIndex(position)
+
+                PlayerManager.getPlayer().addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        updateCurrentSong()
+                    }
+                })
 
                 val mediaItem = MediaItem.Builder()
                     .setUri(Uri.parse(songList[songList.getCurrentSongIndex()].getSongUrl()))
                     .setMimeType(MimeTypes.AUDIO_MP4)
                     .build()
-                player.setMediaItem(mediaItem)
-
-                player.prepare()
-
-                updateCurrentSong()
+                PlayerManager.getPlayer().setMediaItem(mediaItem)
+                PlayerManager.getPlayer().prepare()
+                PlayerManager.getPlayer().play()
             }
         })
+
+        // Get current song and update it
+        updateCurrentSong()
 
         // Play/pause button handler
         ibPlayPause.setOnClickListener {
             // When music is playing, change to pause and pause music
             // Else change to play and play music
-            if (player.isPlaying) {
+            if (PlayerManager.getPlayer().isPlaying) {
                 ibPlayPause.setImageResource(R.drawable.play)
-                player.pause()
+                PlayerManager.getPlayer().pause()
             } else {
                 ibPlayPause.setImageResource(R.drawable.pause)
-                player.play()
+                PlayerManager.getPlayer().play()
             }
         }
     }
 
     // Update UI of the current song
     private fun updateCurrentSong() {
+        if (PlayerManager.getPlayer().isPlaying) {
+            ibPlayPause.setImageResource(R.drawable.pause)
+        } else {
+            ibPlayPause.setImageResource(R.drawable.play)
+        }
+
         val currentSong = songList.getCurrentSongIndex()
         Picasso.get().load(songList[currentSong].getImageUrl()).into(ivCurrentSongImage)
         tvCurrentSongTitle.text = songList[currentSong].getTitle()
         tvCurrentArtistName.text = songList[currentSong].getArtist()
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == MUSIC_ACTIVITY_REQUEST_CODE) {
+            // Handle the result from MusicActivity
+            if (resultCode == Activity.RESULT_OK) {
+                // Do actions in MainActivity when MusicActivity finishes
+                // This block will execute when MusicActivity calls setResult(Activity.RESULT_OK)
+                updateUIWithSongs(songList)
+                // Update server with likes
+            }
+        }
+    }
+
+
     //function that happens when the updateSpeedThread updates
     private fun updateSpeedOnUI(speed: Float) {
-        Log.w("MainActivity", speed.toString())
+        // Log.w("MainActivity", speed.toString())
     }
 
 
@@ -227,5 +275,8 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         var songList: Songs = Songs()
+        const val MUSIC_ACTIVITY_REQUEST_CODE = 100
+        const val DEFAULT_SONG = 0
+        private const val CURRENT_SONG: String = "currentSongIndex"
     }
 }
