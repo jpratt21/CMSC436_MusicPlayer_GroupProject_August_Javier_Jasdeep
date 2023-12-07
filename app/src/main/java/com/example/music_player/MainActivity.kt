@@ -38,16 +38,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbRef: DatabaseReference
     private lateinit var player: ExoPlayer
     private lateinit var speedTracker: GPSSpeed
-    private var i =0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        songRecyclerView = findViewById(R.id.rvSongs)
+        songRecyclerView = findViewById(R.id.rvSongs)   // List of songs View
         songRecyclerView.layoutManager = LinearLayoutManager(this)
         songRecyclerView.setHasFixedSize(true)
-        tvLoadingData = findViewById(R.id.tvLoadingData)
+        tvLoadingData = findViewById(R.id.tvLoadingData)    // Appears when fetching songs from server
         ivCurrentSongImage = findViewById(R.id.ivCurrentSongImage)
         tvCurrentSongTitle = findViewById(R.id.tvCurrentSongTitle)
         tvCurrentArtistName = findViewById(R.id.tvCurrentArtistName)
@@ -55,39 +54,39 @@ class MainActivity : AppCompatActivity() {
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
         player = ExoPlayer.Builder(this).build()
         speedTracker = GPSSpeed(this)
-        i = 0
 
+        // Once songs are loaded
         getSongs { songList ->
-            // Continues App
 
+            // Continues App
+            // Create player which handles the music files
             val mediaItem = MediaItem.Builder()
                 .setUri(Uri.parse(songList[songList.getCurrentSongIndex()].getSongUrl()))
                 .setMimeType(MimeTypes.AUDIO_MP4)
                 .build()
             player.setMediaItem(mediaItem)
-            Log.w("Main Activity", mediaItem.toString())
 
             player.prepare()
 
+            // Make the current song clickable
             llCurrentPlaying.isClickable = true
             llCurrentPlaying.setOnClickListener {
                 val intent = Intent(this, MusicActivity::class.java)
                 startActivity(intent)
             }
 
+            // Check for location permissions
             if (checkPlayServices() && checkLocationPermission()) {
                 startLocationUpdates()
             }
 
+            // Each second, update user speed
             Thread {
                 while (true) {
-//                val speed = 10.9F
                     val speed = speedTracker.getSpeed()
-
                     runOnUiThread {
                         updateSpeedOnUI(speed)
                     }
-
                     Thread.sleep(1000)
                 }
             }.start()
@@ -95,13 +94,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getSongs(callback: (Songs) -> Unit) {
+        // Make everything invisible except: Loading data...
         songRecyclerView.visibility = View.GONE
         tvLoadingData.visibility = View.VISIBLE
         llCurrentPlaying.visibility = View.GONE
         songList.clear()
 
+        // Get the reference from the Firebase server
         dbRef = FirebaseDatabase.getInstance().getReference("songs")
-
+        // Retrieve all the songs
         dbRef.addValueEventListener(object: ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
@@ -111,29 +112,32 @@ class MainActivity : AppCompatActivity() {
                             songList.add(songData)
                         }
                     }
-
+                    // Update UI
                     updateUIWithSongs(songList)
-
+                    // callback so the rest of the app can continue
                     callback(songList)
                 }
             }
             override fun onCancelled(error: DatabaseError) {
-                TODO("Not yet implemented")
+                // Not necessary
             }
         })
     }
 
     private fun updateUIWithSongs(songList: Songs) {
+        // Make everything visible
         songRecyclerView.visibility = View.VISIBLE
         tvLoadingData.visibility = View.GONE
         llCurrentPlaying.visibility = View.VISIBLE
 
-        // Get current song with persistent data
+        // Get current song and update it
         updateCurrentSong()
 
+        // Update the visual list of songs
         val songAdapter = SongAdapter(songList)
         songRecyclerView.adapter = songAdapter
 
+        // Sets a click listener for each of the songs to change the current songs
         songAdapter.setOnItemClickListener(object : SongAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
                 Log.w("Main Activity", songList[position].toString())
@@ -153,6 +157,7 @@ class MainActivity : AppCompatActivity() {
 
         })
 
+        // Play/pause button handler
         ibPlayPause.setOnClickListener {
             // When music is playing, change to pause and pause music
             // Else change to play and play music
@@ -163,13 +168,10 @@ class MainActivity : AppCompatActivity() {
                 ibPlayPause.setImageResource(R.drawable.pause)
                 player.play()
             }
-
-
-            Log.w("Main Activity", player.mediaItemCount.toString())
         }
-
     }
 
+    // Update UI of the current song
     private fun updateCurrentSong() {
         val currentSong = songList.getCurrentSongIndex()
         Picasso.get().load(songList[currentSong].getImageUrl()).into(ivCurrentSongImage)
@@ -230,7 +232,4 @@ class MainActivity : AppCompatActivity() {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         var songList: Songs = Songs()
     }
-
-
-
 }
