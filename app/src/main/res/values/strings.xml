@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ServerMusicPlayer</string>
+    <string name="app_name">Music Player</string>
     <string name="loading_data">Loading Data…</string>
     <string name="song_name">Song Name</string>
     <string name="fetch">FETCH</string>

@@ -13,8 +13,13 @@ class MusicActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_music)
 
-        ivCurrentSongImage = findViewById(R.id.ivCurrentSongImage)
+        updateSong()
 
+    }
+
+    private fun updateSong() {
+        ivCurrentSongImage = findViewById(R.id.ivCurrentSongImage)
         Picasso.get().load(MainActivity.songList[MainActivity.songList.getCurrentSongIndex()].getImageUrl()).into(ivCurrentSongImage)
+        
     }
 }

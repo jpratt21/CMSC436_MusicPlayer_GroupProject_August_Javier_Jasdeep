@@ -4,18 +4,18 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Looper
-import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.*
-import com.google.android.gms.location.ActivityRecognition
-import com.google.android.gms.location.ActivityRecognitionClient
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 
 class GPSSpeed (private val context: Context){
 
     private var classSpeed: Float = 0F
 
-//the fusedlocationclient is the thing that actually gets the speed. relies on
+//the fusedLocationClient is the thing that actually gets the speed. relies on
 //    google services, extremely important
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
@@ -39,7 +39,7 @@ class GPSSpeed (private val context: Context){
     }
 
     fun getSpeed(): Float {
-        return (String.format("%.2f", classSpeed).toFloat())
+        return classSpeed
     }
 
     fun startTrackingSpeed() {

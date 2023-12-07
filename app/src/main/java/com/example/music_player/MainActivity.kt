@@ -152,9 +152,7 @@ class MainActivity : AppCompatActivity() {
                 player.prepare()
 
                 updateCurrentSong()
-
             }
-
         })
 
         // Play/pause button handler
@@ -181,9 +179,7 @@ class MainActivity : AppCompatActivity() {
 
     //function that happens when the updateSpeedThread updates
     private fun updateSpeedOnUI(speed: Float) {
-//        i += 1
-//        Log.w("MainActivity", "update number $i")
-        Log.w("MainActivity", "$speed")
+        Log.w("MainActivity", speed.toString())
     }
 
 
