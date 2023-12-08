@@ -83,6 +83,19 @@ class MainActivity : AppCompatActivity() {
                 startActivityForResult(intent, MUSIC_ACTIVITY_REQUEST_CODE)
             }
 
+            // Play/pause button handler
+            ibPlayPause.setOnClickListener {
+                // When music is playing, change to pause and pause music
+                // Else change to play and play music
+                if (PlayerManager.getPlayer().isPlaying) {
+                    ibPlayPause.setImageResource(R.drawable.play)
+                    PlayerManager.getPlayer().pause()
+                } else {
+                    ibPlayPause.setImageResource(R.drawable.pause)
+                    PlayerManager.getPlayer().play()
+                }
+            }
+
             // Check for location permissions
             if (checkPlayServices() && checkLocationPermission()) {
                 startLocationUpdates()
@@ -101,14 +114,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onStop() {
+        super.onStop()
+
+        Log.w("Main Activity", "Inside onStop")
+        updateServerLikes()
+
         val pref : SharedPreferences =
             this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
-
         val editor : SharedPreferences.Editor = pref.edit()
         editor.putInt(CURRENT_SONG, songList.getCurrentSongIndex())
         editor.apply()
+    }
+
+    private fun updateServerLikes() {
+        for (song in songList) {
+            dbRef = FirebaseDatabase
+                .getInstance()
+                .getReference("songs")
+                .child(song.getMediaId())
+                .child("like")
+            dbRef.setValue(song.getLike())
+        }
     }
 
     private fun getSongs(callback: (Songs) -> Unit) {
@@ -130,8 +157,10 @@ class MainActivity : AppCompatActivity() {
                             songList.add(songData)
                         }
                     }
-                    // Update UI
-                    updateUIWithSongs(songList)
+                    // Update List of Songs (Recycler View)
+                    updateUIWithSongs()
+                    // Update Current Song
+                    updateCurrentSong()
                     // callback so the rest of the app can continue
                     callback(songList)
                 }
@@ -142,7 +171,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun updateUIWithSongs(songList: Songs) {
+    private fun updateUIWithSongs() {
         // Make everything visible
         songRecyclerView.visibility = View.VISIBLE
         tvLoadingData.visibility = View.GONE
@@ -157,8 +186,6 @@ class MainActivity : AppCompatActivity() {
             override fun onItemClick(position: Int) {
 
                 PlayerManager.getPlayer().pause()
-
-                Log.w("Main Activity", songList[position].toString())
 
                 songList.setCurrentSongIndex(position)
 
@@ -177,36 +204,21 @@ class MainActivity : AppCompatActivity() {
                 PlayerManager.getPlayer().play()
             }
         })
-
-        // Get current song and update it
-        updateCurrentSong()
-
-        // Play/pause button handler
-        ibPlayPause.setOnClickListener {
-            // When music is playing, change to pause and pause music
-            // Else change to play and play music
-            if (PlayerManager.getPlayer().isPlaying) {
-                ibPlayPause.setImageResource(R.drawable.play)
-                PlayerManager.getPlayer().pause()
-            } else {
-                ibPlayPause.setImageResource(R.drawable.pause)
-                PlayerManager.getPlayer().play()
-            }
-        }
     }
 
     // Update UI of the current song
     private fun updateCurrentSong() {
+        val currentSong = songList[songList.getCurrentSongIndex()]
+
         if (PlayerManager.getPlayer().isPlaying) {
             ibPlayPause.setImageResource(R.drawable.pause)
         } else {
             ibPlayPause.setImageResource(R.drawable.play)
         }
 
-        val currentSong = songList.getCurrentSongIndex()
-        Picasso.get().load(songList[currentSong].getImageUrl()).into(ivCurrentSongImage)
-        tvCurrentSongTitle.text = songList[currentSong].getTitle()
-        tvCurrentArtistName.text = songList[currentSong].getArtist()
+        Picasso.get().load(currentSong.getImageUrl()).into(ivCurrentSongImage)
+        tvCurrentSongTitle.text = currentSong.getTitle()
+        tvCurrentArtistName.text = currentSong.getArtist()
     }
 
     @Deprecated("Deprecated in Java")
@@ -218,18 +230,15 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == Activity.RESULT_OK) {
                 // Do actions in MainActivity when MusicActivity finishes
                 // This block will execute when MusicActivity calls setResult(Activity.RESULT_OK)
-                updateUIWithSongs(songList)
-                // Update server with likes
+                updateCurrentSong()
             }
         }
     }
-
 
     //function that happens when the updateSpeedThread updates
     private fun updateSpeedOnUI(speed: Float) {
         // Log.w("MainActivity", speed.toString())
     }
-
 
     private fun checkPlayServices(): Boolean {
         val apiAvailability = GoogleApiAvailability.getInstance()

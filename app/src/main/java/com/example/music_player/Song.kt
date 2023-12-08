@@ -4,7 +4,7 @@ class Song(
     private var artist: String = "",
     private var imageUrl: String = "",
     private var like: Boolean = false,
-    private var mediaId: Int = 0,
+    private var mediaId: String = "",
     private var songUrl: String = "",
     private var title: String = ""
     ) {
@@ -28,10 +28,10 @@ class Song(
     fun setLike(like: Boolean) {
         this.like = like
     }
-    private fun getMediaId(): Int {
+    fun getMediaId(): String {
         return mediaId
     }
-    fun setMediaId(mediaId: Int) {
+    fun setMediaId(mediaId: String) {
         this.mediaId = mediaId
     }
     fun getSongUrl(): String {

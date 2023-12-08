@@ -17,6 +17,7 @@ class MusicActivity: AppCompatActivity() {
     private lateinit var tvArtistName:TextView
     private lateinit var ibSongLike: ImageButton
     private lateinit var ibPlayPause: ImageButton
+    private lateinit var currentSong: Song
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,30 +30,36 @@ class MusicActivity: AppCompatActivity() {
         ibSongLike = findViewById(R.id.ibSongLike)
         ibPlayPause = findViewById(R.id.ibPlayPause)
 
-        updateSong()
+        currentSong = MainActivity.songList[MainActivity.songList.getCurrentSongIndex()]
 
+        updateSongUI()
     }
 
-    private fun updateSong() {
-        val currentSong = MainActivity.songList.getCurrentSongIndex()
-
-        Picasso.get().load(MainActivity.songList[currentSong].getImageUrl()).into(ivCurrentSongImage)
-
-        tvCurrentSongTitle.text = MainActivity.songList[currentSong].getTitle()
-        tvArtistName.text = MainActivity.songList[currentSong].getArtist()
-
-        if (MainActivity.songList[currentSong].getLike()) {
+    private fun updateSongUI() {
+        // Set song image
+        Picasso.get().load(currentSong.getImageUrl()).into(ivCurrentSongImage)
+        // Set song title
+        tvCurrentSongTitle.text = currentSong.getTitle()
+        // Set song artist
+        tvArtistName.text = currentSong.getArtist()
+        // Set song like
+        if (currentSong.getLike()) {
             ibSongLike.setImageResource(R.drawable.like)
         } else {
             ibSongLike.setImageResource(R.drawable.like_border)
         }
-
+        // Set play/pause
         if (PlayerManager.getPlayer().isPlaying) {
             ibPlayPause.setImageResource(R.drawable.pause)
         } else {
             ibPlayPause.setImageResource(R.drawable.play)
         }
 
+        // Set up listeners
+        setUpListeners()
+    }
+
+    private fun setUpListeners() {
         // Play/pause button handler
         ibPlayPause.setOnClickListener {
             // When music is playing, change to pause and pause music
@@ -66,23 +73,38 @@ class MusicActivity: AppCompatActivity() {
             }
         }
 
+        // Like button handler
         ibSongLike.setOnClickListener {
-            if (MainActivity.songList[currentSong].getLike()) {
+            if (currentSong.getLike()) {
+                currentSong.setLike(false)
                 ibSongLike.setImageResource(R.drawable.like_border)
-                MainActivity.songList[currentSong].setLike(false)
             } else {
+                currentSong.setLike(true)
                 ibSongLike.setImageResource(R.drawable.like)
-                MainActivity.songList[currentSong].setLike(true)
             }
         }
 
+        // Down arrow button listener
         ibDownArrow.setOnClickListener {
-            // Inside MusicActivity when you want to finish it and return to MainActivity
-            // Call this when you want to indicate successful completion
+            // Update songList
+            updateSongList()
             val resultIntent = Intent()
             setResult(Activity.RESULT_OK, resultIntent)
-
             finish()
         }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        super.onBackPressed()
+        // Update songList
+        updateSongList()
+        val resultIntent = Intent()
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
+    }
+
+    private fun updateSongList() {
+        MainActivity.songList[MainActivity.songList.getCurrentSongIndex()] = currentSong
     }
 }

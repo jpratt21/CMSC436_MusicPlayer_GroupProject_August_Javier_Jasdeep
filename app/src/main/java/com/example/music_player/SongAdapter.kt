@@ -9,7 +9,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
 
-class SongAdapter (private val songList: ArrayList<Song>): RecyclerView.Adapter<SongAdapter.ViewHolder>() {
+class SongAdapter (private val songList: Songs): RecyclerView.Adapter<SongAdapter.ViewHolder>() {
 
     private lateinit var myListener: OnItemClickListener
 
@@ -29,13 +29,7 @@ class SongAdapter (private val songList: ArrayList<Song>): RecyclerView.Adapter<
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val currentSong = songList[position]
         Picasso.get().load(currentSong.getImageUrl()).into(holder.ivSongImage)
-        /*
-        val url = URL(currentSong.imageUrl)
-        val connection: URLConnection = url.openConnection()
-        val iStream: InputStream = connection.getInputStream()
-        val imageBitmap: Bitmap = BitmapFactory.decodeStream(iStream)
-        holder.ivSongImage.setImageBitmap(imageBitmap)
-        */
+
         holder.tvSongName.text = currentSong.getTitle()
         holder.tvSongArtist.text = currentSong.getArtist()
         if (currentSong.getLike()) {
@@ -46,13 +40,12 @@ class SongAdapter (private val songList: ArrayList<Song>): RecyclerView.Adapter<
         holder.ibSongLike.setOnClickListener {
             if (currentSong.getLike()) {
                 holder.ibSongLike.setImageResource(R.drawable.like_border)
-                currentSong.setLike(false)
+                MainActivity.songList[position].setLike(false)
             } else {
                 holder.ibSongLike.setImageResource(R.drawable.like)
-                currentSong.setLike(true)
+                MainActivity.songList[position].setLike(true)
             }
         }
-
     }
 
     override fun getItemCount(): Int {
