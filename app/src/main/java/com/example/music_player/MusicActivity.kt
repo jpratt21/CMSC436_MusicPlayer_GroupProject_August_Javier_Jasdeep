@@ -7,6 +7,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import com.squareup.picasso.Picasso
 
 class MusicActivity: AppCompatActivity() {
@@ -18,6 +20,7 @@ class MusicActivity: AppCompatActivity() {
     private lateinit var ibSongLike: ImageButton
     private lateinit var ibPlayPause: ImageButton
     private lateinit var currentSong: Song
+    private lateinit var player: ExoPlayer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +34,8 @@ class MusicActivity: AppCompatActivity() {
         ibPlayPause = findViewById(R.id.ibPlayPause)
 
         currentSong = MainActivity.songList[MainActivity.songList.getCurrentSongIndex()]
+
+        player = PlayerManager.getPlayer()
 
         updateSongUI()
     }
@@ -49,7 +54,7 @@ class MusicActivity: AppCompatActivity() {
             ibSongLike.setImageResource(R.drawable.like_border)
         }
         // Set play/pause
-        if (PlayerManager.getPlayer().isPlaying) {
+        if (player.isPlaying) {
             ibPlayPause.setImageResource(R.drawable.pause)
         } else {
             ibPlayPause.setImageResource(R.drawable.play)
@@ -60,16 +65,25 @@ class MusicActivity: AppCompatActivity() {
     }
 
     private fun setUpListeners() {
+        player.addListener(
+            object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (player.isPlaying)
+                        ibPlayPause.setImageResource(R.drawable.pause)
+                    else
+                        ibPlayPause.setImageResource(R.drawable.play)
+                }
+            }
+        )
+
         // Play/pause button handler
         ibPlayPause.setOnClickListener {
             // When music is playing, change to pause and pause music
             // Else change to play and play music
-            if (PlayerManager.getPlayer().isPlaying) {
-                ibPlayPause.setImageResource(R.drawable.play)
-                PlayerManager.getPlayer().pause()
+            if (player.isPlaying) {
+                player.pause()
             } else {
-                ibPlayPause.setImageResource(R.drawable.pause)
-                PlayerManager.getPlayer().play()
+                player.play()
             }
         }
 
@@ -90,7 +104,7 @@ class MusicActivity: AppCompatActivity() {
             updateSongList()
             val resultIntent = Intent()
             setResult(Activity.RESULT_OK, resultIntent)
-            finish()
+            finishAfterTransition()
         }
     }
 
@@ -101,10 +115,10 @@ class MusicActivity: AppCompatActivity() {
         updateSongList()
         val resultIntent = Intent()
         setResult(Activity.RESULT_OK, resultIntent)
-        finish()
+        finishAfterTransition()
     }
 
     private fun updateSongList() {
-        MainActivity.songList[MainActivity.songList.getCurrentSongIndex()] = currentSong
+        MainActivity.songList[player.currentMediaItemIndex] = currentSong
     }
 }

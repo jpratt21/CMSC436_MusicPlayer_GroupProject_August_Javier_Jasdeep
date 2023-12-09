@@ -1,11 +1,11 @@
 package com.example.music_player
 
 import android.app.Activity
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -13,11 +13,15 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityOptionsCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.common.ConnectionResult
@@ -39,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ibPlayPause: ImageButton
     private lateinit var llCurrentPlaying: LinearLayout
     private lateinit var dbRef: DatabaseReference
+    private lateinit var player: ExoPlayer
     private lateinit var speedTracker: GPSSpeed
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
         speedTracker = GPSSpeed(this)
         PlayerManager.initializePlayer(this)
+        player = PlayerManager.getPlayer()
 
         val pref: SharedPreferences =
             this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
@@ -65,36 +71,8 @@ class MainActivity : AppCompatActivity() {
         getSongs { songList ->
 
             // Continues App
-            // Create player which handles the music files
-            val mediaItem = MediaItem.Builder()
-                .setUri(Uri.parse(songList[songList.getCurrentSongIndex()].getSongUrl()))
-                .setMimeType(MimeTypes.AUDIO_MP4)
-                .build()
-            PlayerManager.getPlayer().setMediaItem(mediaItem)
 
-            PlayerManager.getPlayer().prepare()
-            PlayerManager.getPlayer().pause()
-
-            // Make the current song clickable
-            llCurrentPlaying.isClickable = true
-            llCurrentPlaying.setOnClickListener {
-                val intent = Intent(this, MusicActivity::class.java)
-                @Suppress("DEPRECATION")
-                startActivityForResult(intent, MUSIC_ACTIVITY_REQUEST_CODE)
-            }
-
-            // Play/pause button handler
-            ibPlayPause.setOnClickListener {
-                // When music is playing, change to pause and pause music
-                // Else change to play and play music
-                if (PlayerManager.getPlayer().isPlaying) {
-                    ibPlayPause.setImageResource(R.drawable.play)
-                    PlayerManager.getPlayer().pause()
-                } else {
-                    ibPlayPause.setImageResource(R.drawable.pause)
-                    PlayerManager.getPlayer().play()
-                }
-            }
+            setUpClickListeners()
 
             // Check for location permissions
             if (checkPlayServices() && checkLocationPermission()) {
@@ -114,10 +92,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
+    private fun setUpClickListeners() {
+        // Make the current song clickable
+        llCurrentPlaying.setOnClickListener {
 
-        Log.w("Main Activity", "Inside onStop")
+            val intent = Intent(this, MusicActivity::class.java)
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, MUSIC_ACTIVITY_REQUEST_CODE, ActivityOptions.makeSceneTransitionAnimation(this).toBundle())
+        }
+
+        player.addListener(
+            object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    updateCurrentSong()
+                }
+            }
+        )
+
+        // Play/pause button handler
+        ibPlayPause.setOnClickListener {
+            // When music is playing, change to pause and pause music
+            // Else change to play and play music
+            if (player.isPlaying) {
+                player.pause()
+            } else {
+                player.play()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+
+        Log.w("Main Activity", "Inside onDestroy")
         updateServerLikes()
 
         val pref : SharedPreferences =
@@ -125,6 +131,9 @@ class MainActivity : AppCompatActivity() {
         val editor : SharedPreferences.Editor = pref.edit()
         editor.putInt(CURRENT_SONG, songList.getCurrentSongIndex())
         editor.apply()
+        PlayerManager.releasePlayer()
+
+        super.onDestroy()
     }
 
     private fun updateServerLikes() {
@@ -138,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     private fun getSongs(callback: (Songs) -> Unit) {
         // Make everything invisible except: Loading data...
         songRecyclerView.visibility = View.GONE
@@ -149,7 +159,7 @@ class MainActivity : AppCompatActivity() {
         dbRef = FirebaseDatabase.getInstance().getReference("songs")
         // Retrieve all the songs
         dbRef.addValueEventListener(object: ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
+            @OptIn(UnstableApi::class) override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
                     for (songSnap in snapshot.children) {
                         val songData = songSnap.getValue(Song::class.java)
@@ -157,6 +167,13 @@ class MainActivity : AppCompatActivity() {
                             songList.add(songData)
                         }
                     }
+                    val mediaItems = ArrayList<MediaItem>()
+                    for (song in songList) {
+                        mediaItems.add(MediaItem.Builder().setUri(song.getSongUrl()).setMimeType(MimeTypes.AUDIO_MP4).build())
+                    }
+                    player.setMediaItems(mediaItems)
+                    player.prepare()
+                    player.pause()
                     // Update List of Songs (Recycler View)
                     updateUIWithSongs()
                     // Update Current Song
@@ -179,38 +196,27 @@ class MainActivity : AppCompatActivity() {
 
         // Update the visual list of songs
         val songAdapter = SongAdapter(songList)
-        songRecyclerView.adapter = songAdapter
 
         // Sets a click listener for each of the songs to change the current songs
         songAdapter.setOnItemClickListener(object : SongAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
-
-                PlayerManager.getPlayer().pause()
-
                 songList.setCurrentSongIndex(position)
 
-                PlayerManager.getPlayer().addListener(object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        updateCurrentSong()
-                    }
-                })
+                player.seekToDefaultPosition(position)
 
-                val mediaItem = MediaItem.Builder()
-                    .setUri(Uri.parse(songList[songList.getCurrentSongIndex()].getSongUrl()))
-                    .setMimeType(MimeTypes.AUDIO_MP4)
-                    .build()
-                PlayerManager.getPlayer().setMediaItem(mediaItem)
-                PlayerManager.getPlayer().prepare()
-                PlayerManager.getPlayer().play()
+                player.prepare()
+                player.play()
             }
         })
+
+        songRecyclerView.adapter = songAdapter
     }
 
     // Update UI of the current song
     private fun updateCurrentSong() {
-        val currentSong = songList[songList.getCurrentSongIndex()]
+        val currentSong = songList[player.currentMediaItemIndex]
 
-        if (PlayerManager.getPlayer().isPlaying) {
+        if (player.isPlaying) {
             ibPlayPause.setImageResource(R.drawable.pause)
         } else {
             ibPlayPause.setImageResource(R.drawable.play)
@@ -230,6 +236,7 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == Activity.RESULT_OK) {
                 // Do actions in MainActivity when MusicActivity finishes
                 // This block will execute when MusicActivity calls setResult(Activity.RESULT_OK)
+                // Update Likes in Recycle View
                 updateCurrentSong()
             }
         }

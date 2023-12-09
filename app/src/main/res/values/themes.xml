@@ -3,6 +3,9 @@
     <style name="Base.Theme.Music_Player" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+
+        <item name="android:windowEnterTransition">@transition/slide_from_bottom</item>
+        <item name="android:windowExitTransition">@transition/fade_and_slide</item>
     </style>
 
     <style name="Theme.Music_Player" parent="Base.Theme.Music_Player" />
