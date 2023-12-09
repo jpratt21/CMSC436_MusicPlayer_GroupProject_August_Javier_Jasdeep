@@ -26,6 +26,8 @@ class MusicActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_music)
 
+        player = PlayerManager.getPlayer()
+
         ibDownArrow = findViewById(R.id.down_arrow)
         ivCurrentSongImage = findViewById(R.id.ivCurrentSongImage)
         tvCurrentSongTitle = findViewById(R.id.tvCurrentSongTitle)
@@ -33,9 +35,7 @@ class MusicActivity: AppCompatActivity() {
         ibSongLike = findViewById(R.id.ibSongLike)
         ibPlayPause = findViewById(R.id.ibPlayPause)
 
-        currentSong = MainActivity.songList[MainActivity.songList.getCurrentSongIndex()]
-
-        player = PlayerManager.getPlayer()
+        currentSong = MainActivity.songList[player.currentMediaItemIndex]
 
         updateSongUI()
     }

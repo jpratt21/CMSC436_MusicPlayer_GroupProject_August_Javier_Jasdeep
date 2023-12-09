@@ -3,5 +3,6 @@
 
     <slide
         android:duration="500"
-        android:slideEdge="bottom" />
+        android:slideEdge="top" />
+
 </transitionSet>

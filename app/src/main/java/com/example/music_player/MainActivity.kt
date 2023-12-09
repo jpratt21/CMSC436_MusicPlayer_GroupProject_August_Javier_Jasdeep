@@ -32,6 +32,9 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.squareup.picasso.Picasso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,10 +48,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbRef: DatabaseReference
     private lateinit var player: ExoPlayer
     private lateinit var speedTracker: GPSSpeed
+    private lateinit var songAdapter: SongAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        PlayerManager.initializePlayer(this)
+        player = PlayerManager.getPlayer()
 
         songRecyclerView = findViewById(R.id.rvSongs)   // List of songs View
         songRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -59,13 +66,8 @@ class MainActivity : AppCompatActivity() {
         tvCurrentArtistName = findViewById(R.id.tvCurrentArtistName)
         ibPlayPause = findViewById(R.id.ibPlayPause)
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
-        speedTracker = GPSSpeed(this)
-        PlayerManager.initializePlayer(this)
-        player = PlayerManager.getPlayer()
 
-        val pref: SharedPreferences =
-            this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
-        songList.setCurrentSongIndex(pref.getInt(CURRENT_SONG, DEFAULT_SONG))
+        speedTracker = GPSSpeed(this)
 
         // Once songs are loaded
         getSongs { songList ->
@@ -121,32 +123,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-
-        Log.w("Main Activity", "Inside onDestroy")
-        updateServerLikes()
-
+    override fun onPause() {
+        super.onPause()
         val pref : SharedPreferences =
             this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
         val editor : SharedPreferences.Editor = pref.edit()
-        editor.putInt(CURRENT_SONG, songList.getCurrentSongIndex())
+        editor.putInt(CURRENT_SONG, player.currentMediaItemIndex)
         editor.apply()
+    }
+
+    override fun onDestroy() {
+
+        Log.w("Main Activity", "Inside onDestroy")
+
         PlayerManager.releasePlayer()
 
         super.onDestroy()
     }
-
-    private fun updateServerLikes() {
-        for (song in songList) {
-            dbRef = FirebaseDatabase
-                .getInstance()
-                .getReference("songs")
-                .child(song.getMediaId())
-                .child("like")
-            dbRef.setValue(song.getLike())
-        }
-    }
-
 
     private fun getSongs(callback: (Songs) -> Unit) {
         // Make everything invisible except: Loading data...
@@ -167,11 +160,17 @@ class MainActivity : AppCompatActivity() {
                             songList.add(songData)
                         }
                     }
+
                     val mediaItems = ArrayList<MediaItem>()
                     for (song in songList) {
                         mediaItems.add(MediaItem.Builder().setUri(song.getSongUrl()).setMimeType(MimeTypes.AUDIO_MP4).build())
                     }
                     player.setMediaItems(mediaItems)
+
+                    val pref: SharedPreferences =
+                        this@MainActivity.getSharedPreferences(this@MainActivity.packageName + "_preferences", Context.MODE_PRIVATE)
+                    player.seekToDefaultPosition(pref.getInt(CURRENT_SONG, DEFAULT_SONG))
+
                     player.prepare()
                     player.pause()
                     // Update List of Songs (Recycler View)
@@ -195,12 +194,11 @@ class MainActivity : AppCompatActivity() {
         llCurrentPlaying.visibility = View.VISIBLE
 
         // Update the visual list of songs
-        val songAdapter = SongAdapter(songList)
+        songAdapter = SongAdapter(songList)
 
         // Sets a click listener for each of the songs to change the current songs
         songAdapter.setOnItemClickListener(object : SongAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
-                songList.setCurrentSongIndex(position)
 
                 player.seekToDefaultPosition(position)
 
@@ -238,6 +236,7 @@ class MainActivity : AppCompatActivity() {
                 // This block will execute when MusicActivity calls setResult(Activity.RESULT_OK)
                 // Update Likes in Recycle View
                 updateCurrentSong()
+                songAdapter.notifyItemChanged(player.currentMediaItemIndex)
             }
         }
     }

@@ -5,7 +5,7 @@
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
 
         <item name="android:windowEnterTransition">@transition/slide_from_bottom</item>
-        <item name="android:windowExitTransition">@transition/fade_and_slide</item>
+        <item name="android:windowExitTransition">@transition/slide_from_top</item>
     </style>
 
     <style name="Theme.Music_Player" parent="Base.Theme.Music_Player" />

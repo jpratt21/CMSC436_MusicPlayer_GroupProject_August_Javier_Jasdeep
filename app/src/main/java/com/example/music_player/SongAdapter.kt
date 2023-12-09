@@ -7,11 +7,17 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.squareup.picasso.Picasso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SongAdapter (private val songList: Songs): RecyclerView.Adapter<SongAdapter.ViewHolder>() {
 
     private lateinit var myListener: OnItemClickListener
+    private lateinit var dbRef: DatabaseReference
 
     interface OnItemClickListener {
         fun onItemClick(position: Int)
@@ -39,18 +45,21 @@ class SongAdapter (private val songList: Songs): RecyclerView.Adapter<SongAdapte
         }
         holder.ibSongLike.setOnClickListener {
             if (currentSong.getLike()) {
-                holder.ibSongLike.setImageResource(R.drawable.like_border)
                 MainActivity.songList[position].setLike(false)
+                holder.ibSongLike.setImageResource(R.drawable.like_border)
             } else {
-                holder.ibSongLike.setImageResource(R.drawable.like)
                 MainActivity.songList[position].setLike(true)
+                holder.ibSongLike.setImageResource(R.drawable.like)
             }
+            dbRef = FirebaseDatabase.getInstance().getReference("songs").child(songList[position].getMediaId()).child("like")
+            dbRef.setValue(currentSong.getLike())
         }
     }
 
     override fun getItemCount(): Int {
         return songList.size
     }
+
 
     class ViewHolder(itemView: View, clickListener: OnItemClickListener): RecyclerView.ViewHolder(itemView) {
         val tvSongName: TextView = itemView.findViewById(R.id.tvSongName)
