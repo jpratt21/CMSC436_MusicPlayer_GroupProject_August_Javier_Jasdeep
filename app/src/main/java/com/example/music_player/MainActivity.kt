@@ -16,7 +16,6 @@ import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityOptionsCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -32,9 +31,6 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.squareup.picasso.Picasso
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -70,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         speedTracker = GPSSpeed(this)
 
         // Once songs are loaded
-        getSongs { songList ->
+        getSongs {
 
             // Continues App
 
@@ -151,8 +147,8 @@ class MainActivity : AppCompatActivity() {
         // Get the reference from the Firebase server
         dbRef = FirebaseDatabase.getInstance().getReference("songs")
         // Retrieve all the songs
-        dbRef.addValueEventListener(object: ValueEventListener {
-            @OptIn(UnstableApi::class) override fun onDataChange(snapshot: DataSnapshot) {
+        dbRef.addListenerForSingleValueEvent(object: ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
                     for (songSnap in snapshot.children) {
                         val songData = songSnap.getValue(Song::class.java)

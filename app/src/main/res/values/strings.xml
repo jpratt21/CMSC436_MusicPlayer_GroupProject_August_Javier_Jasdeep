@@ -8,4 +8,5 @@
     <string name="song_like">Song Like</string>
     <string name="play_pause_button">Play/Pause</string>
     <string name="down_arrow">Down Arrow</string>
+    <string name="remainingTime">- %1$s</string>
 </resources>

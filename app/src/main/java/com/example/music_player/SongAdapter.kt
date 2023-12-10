@@ -10,9 +10,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.squareup.picasso.Picasso
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class SongAdapter (private val songList: Songs): RecyclerView.Adapter<SongAdapter.ViewHolder>() {
 
@@ -51,7 +48,7 @@ class SongAdapter (private val songList: Songs): RecyclerView.Adapter<SongAdapte
                 MainActivity.songList[position].setLike(true)
                 holder.ibSongLike.setImageResource(R.drawable.like)
             }
-            dbRef = FirebaseDatabase.getInstance().getReference("songs").child(songList[position].getMediaId()).child("like")
+            dbRef = FirebaseDatabase.getInstance().getReference("songs").child(currentSong.getMediaId()).child("like")
             dbRef.setValue(currentSong.getLike())
         }
     }
