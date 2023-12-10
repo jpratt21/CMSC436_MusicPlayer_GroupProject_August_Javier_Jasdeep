@@ -31,6 +31,8 @@ class MusicActivity: AppCompatActivity() {
     private lateinit var position: SeekBar
     private lateinit var tvElapsed: TextView
     private lateinit var tvRemaining: TextView
+    private lateinit var ibPreviousSong: ImageButton
+    private lateinit var ibNextSong: ImageButton
 
     private lateinit var dbRef: DatabaseReference
 
@@ -50,12 +52,17 @@ class MusicActivity: AppCompatActivity() {
         ibPlayPause = findViewById(R.id.ibPlayPause)
         tvElapsed = findViewById(R.id.elapsed)
         tvRemaining = findViewById(R.id.remaining)
+        ibPreviousSong = findViewById(R.id.ibPreviousSong)
+        ibNextSong = findViewById(R.id.ibNextSong)
 
         position = findViewById(R.id.position)
 
         songList = MainActivity.songList
 
         updateSongUI()
+
+        // Set up listeners
+        setUpListeners()
 
         Thread {
             while (true) {
@@ -68,6 +75,8 @@ class MusicActivity: AppCompatActivity() {
     }
 
     private fun updateSeekBar() {
+        totalTime = player.duration.toInt()
+        position.max = totalTime
         val currentPosition = player.currentPosition
         Log.i("Main Activity", currentPosition.toString())
         position.progress = currentPosition.toInt()
@@ -89,8 +98,6 @@ class MusicActivity: AppCompatActivity() {
     }
 
     private fun updateSongUI() {
-        totalTime = player.duration.toInt()
-        position.max = totalTime
         // Set song image
         Picasso.get().load(songList[player.currentMediaItemIndex].getImageUrl()).into(ivCurrentSongImage)
         // Set song title
@@ -110,8 +117,7 @@ class MusicActivity: AppCompatActivity() {
             ibPlayPause.setImageResource(R.drawable.play)
         }
 
-        // Set up listeners
-        setUpListeners()
+        updateSeekBar()
     }
 
     private fun setUpListeners() {
@@ -139,6 +145,18 @@ class MusicActivity: AppCompatActivity() {
             } else {
                 player.play()
             }
+        }
+
+        ibPreviousSong.setOnClickListener {
+            player.seekToPreviousMediaItem()
+            player.prepare()
+            player.play()
+        }
+
+        ibNextSong.setOnClickListener {
+            player.seekToNextMediaItem()
+            player.prepare()
+            player.play()
         }
 
         // Like button handler

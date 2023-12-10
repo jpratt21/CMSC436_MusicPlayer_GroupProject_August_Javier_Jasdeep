@@ -9,4 +9,6 @@
     <string name="play_pause_button">Play/Pause</string>
     <string name="down_arrow">Down Arrow</string>
     <string name="remainingTime">- %1$s</string>
+    <string name="previous_song">Previous Song</string>
+    <string name="next_song">Next Song</string>
 </resources>
