@@ -237,7 +237,8 @@ class MainActivity : AppCompatActivity() {
 
     //function that happens when the updateSpeedThread updates
     private fun updateSpeedOnUI(speed: Float) {
-        // Log.w("MainActivity", speed.toString())
+        Log.w("MainActivity", speed.toString())
+        // Use player.setDeviceVolume(4(whatever Int),0) to adjust the device volume
     }
 
     private fun checkPlayServices(): Boolean {
