@@ -1,7 +1,9 @@
 package com.example.music_player
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageButton
@@ -39,7 +41,6 @@ class MusicActivity: AppCompatActivity() {
         setContentView(R.layout.activity_music)
 
         player = PlayerManager.getPlayer()
-        totalTime = player.duration.toInt()
 
         ibDownArrow = findViewById(R.id.down_arrow)
         ivCurrentSongImage = findViewById(R.id.ivCurrentSongImage)
@@ -51,7 +52,6 @@ class MusicActivity: AppCompatActivity() {
         tvRemaining = findViewById(R.id.remaining)
 
         position = findViewById(R.id.position)
-        position.max = totalTime
 
         songList = MainActivity.songList
 
@@ -89,6 +89,8 @@ class MusicActivity: AppCompatActivity() {
     }
 
     private fun updateSongUI() {
+        totalTime = player.duration.toInt()
+        position.max = totalTime
         // Set song image
         Picasso.get().load(songList[player.currentMediaItemIndex].getImageUrl()).into(ivCurrentSongImage)
         // Set song title
@@ -195,7 +197,14 @@ class MusicActivity: AppCompatActivity() {
         finishAfterTransition()
     }
 
-
+    override fun onPause() {
+        super.onPause()
+        val pref : SharedPreferences =
+            this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
+        val editor : SharedPreferences.Editor = pref.edit()
+        editor.putInt(MainActivity.CURRENT_SONG, player.currentMediaItemIndex)
+        editor.apply()
+    }
 
 
     private fun updateSongList() {

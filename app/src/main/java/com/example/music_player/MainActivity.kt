@@ -13,13 +13,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -288,6 +286,6 @@ class MainActivity : AppCompatActivity() {
         var songList: Songs = Songs()
         const val MUSIC_ACTIVITY_REQUEST_CODE = 100
         const val DEFAULT_SONG = 0
-        private const val CURRENT_SONG: String = "currentSongIndex"
+        const val CURRENT_SONG: String = "currentSongIndex"
     }
 }
