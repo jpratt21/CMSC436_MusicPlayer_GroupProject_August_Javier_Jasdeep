@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -84,7 +83,6 @@ class MusicActivity: AppCompatActivity() {
         totalTime = player.duration.toInt()
         position.max = totalTime
         val currentPosition = player.currentPosition
-        Log.i("Main Activity", currentPosition.toString())
         position.progress = currentPosition.toInt()
         val elapsedTime = createTimeLabel(currentPosition)
         tvElapsed.text = elapsedTime
