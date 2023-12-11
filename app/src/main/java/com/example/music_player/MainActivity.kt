@@ -1,6 +1,6 @@
 package com.example.music_player
 
-//group members: August (James) Pratt, UID:118350172
+// Group members: August (James) Pratt, UID: 118350172; Javier Ortiz Millan, UID: 120392825
 
 
 import android.app.Activity
