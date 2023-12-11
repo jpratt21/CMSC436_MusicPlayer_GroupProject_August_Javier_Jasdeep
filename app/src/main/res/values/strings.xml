@@ -11,4 +11,11 @@
     <string name="remainingTime">- %1$s</string>
     <string name="previous_song">Previous Song</string>
     <string name="next_song">Next Song</string>
+    <string name="settings">Settings</string>
+    <string name="library">Library</string>
+    <string name="favourite_songs">Favourites</string>
+    <string name="adjust_volume_with_speed">Adjust Volume with Speed</string>
+    <string name="go_back">Go Back</string>
+    <string name="volume_control_check">Volume Control Check</string>
+    <string name="control_volume_text">Allow the App to control the volume of your device depending on your actual speed.</string>
 </resources>

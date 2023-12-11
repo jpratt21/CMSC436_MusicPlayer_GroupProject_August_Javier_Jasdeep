@@ -19,9 +19,9 @@ object PlayerManager {
         return player
     }
 
-    fun updatePlayer(player: ExoPlayer) {
+    /* fun updatePlayer(player: ExoPlayer) {
         this.player.release()
         this.player = player
-    }
+    } */
 
 }

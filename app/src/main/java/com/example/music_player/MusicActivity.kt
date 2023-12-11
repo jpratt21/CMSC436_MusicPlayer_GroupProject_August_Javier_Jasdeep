@@ -63,10 +63,7 @@ class MusicActivity: AppCompatActivity() {
 
         songList = MainActivity.songList
 
-        adView = findViewById<AdView>(R.id.adView)
-        var adRequest = AdRequest.Builder().build()
-        // Load the ad with the request.
-        adView.loadAd(adRequest)
+        adView = findViewById(R.id.adView)
 
         updateSongUI()
 
@@ -125,6 +122,10 @@ class MusicActivity: AppCompatActivity() {
         } else {
             ibPlayPause.setImageResource(R.drawable.play)
         }
+
+        val adRequest = AdRequest.Builder().build()
+        // Load the ad with the request.
+        adView.loadAd(adRequest)
 
         updateSeekBar()
     }
@@ -186,6 +187,7 @@ class MusicActivity: AppCompatActivity() {
 
         // Down arrow button listener
         ibDownArrow.setOnClickListener {
+            adView.destroy()
             // Update songList
             updateSongList()
             val resultIntent = Intent()
@@ -217,6 +219,7 @@ class MusicActivity: AppCompatActivity() {
     override fun onBackPressed() {
         @Suppress("DEPRECATION")
         super.onBackPressed()
+        adView.destroy()
         // Update songList
         updateSongList()
         val resultIntent = Intent()

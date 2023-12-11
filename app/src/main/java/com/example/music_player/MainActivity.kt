@@ -33,8 +33,6 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.squareup.picasso.Picasso
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdView
 
 
 class MainActivity : AppCompatActivity() {
@@ -46,18 +44,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvCurrentArtistName: TextView
     private lateinit var ibPlayPause: ImageButton
     private lateinit var llCurrentPlaying: LinearLayout
+    private lateinit var ibSettings: ImageButton
+    private lateinit var llTopMenu: LinearLayout
+
     private lateinit var dbRef: DatabaseReference
     private lateinit var player: ExoPlayer
     private lateinit var speedTracker: GPSSpeed
     private lateinit var songAdapter: SongAdapter
+    private lateinit var audioManager: AudioManager
+    private var maxVolume = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Media3 Player
         PlayerManager.initializePlayer(this)
         player = PlayerManager.getPlayer()
 
+        // Get references for all the views
         songRecyclerView = findViewById(R.id.rvSongs)   // List of songs View
         songRecyclerView.layoutManager = LinearLayoutManager(this)
         songRecyclerView.setHasFixedSize(true)
@@ -67,18 +72,19 @@ class MainActivity : AppCompatActivity() {
         tvCurrentArtistName = findViewById(R.id.tvCurrentArtistName)
         ibPlayPause = findViewById(R.id.ibPlayPause)
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
+        ibSettings= findViewById(R.id.ibSettings)
+        llTopMenu = findViewById(R.id.llTopMenu)
 
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        // Audio manager for adjusting the device volume
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
-
+        // GPS Speed instance
         speedTracker = GPSSpeed(this)
 
-        // Once songs are loaded
+        // Retrieve songs from server
         getSongs {
-
-            // Continues App
+            // Once songs are loaded the App continues
 
             setUpClickListeners()
 
@@ -92,7 +98,8 @@ class MainActivity : AppCompatActivity() {
                 while (true) {
                     val speed = speedTracker.getSpeed()
                     runOnUiThread {
-                        updateSpeedOnUI(speed, audioManager, maxVolume, currentVolume)
+                        if (volumeChange)
+                            updateSpeedOnUI(speed)
                     }
                     Thread.sleep(1000)
                 }
@@ -103,7 +110,7 @@ class MainActivity : AppCompatActivity() {
     private fun setUpClickListeners() {
         // Make the current song clickable
         llCurrentPlaying.setOnClickListener {
-
+            // Open current song menu
             val intent = Intent(this, MusicActivity::class.java)
             @Suppress("DEPRECATION")
             startActivityForResult(intent, MUSIC_ACTIVITY_REQUEST_CODE, ActivityOptions.makeSceneTransitionAnimation(this).toBundle())
@@ -111,7 +118,12 @@ class MainActivity : AppCompatActivity() {
 
         player.addListener(
             object : Player.Listener {
+                // When player changes from play to stop or vice-versa
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    updateCurrentSong()
+                }
+                // When the current song changes to another
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     updateCurrentSong()
                 }
             }
@@ -119,39 +131,49 @@ class MainActivity : AppCompatActivity() {
 
         // Play/pause button handler
         ibPlayPause.setOnClickListener {
-            // When music is playing, change to pause and pause music
-            // Else change to play and play music
+            // When music is playing, change to pause
+            // Else change to play
             if (player.isPlaying) {
                 player.pause()
             } else {
                 player.play()
             }
         }
+
+        // Open settings menu
+        ibSettings.setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     override fun onPause() {
         super.onPause()
+        // Update current song index and settings
         val pref : SharedPreferences =
             this.getSharedPreferences(this.packageName + "_preferences", Context.MODE_PRIVATE)
         val editor : SharedPreferences.Editor = pref.edit()
         editor.putInt(CURRENT_SONG, player.currentMediaItemIndex)
+        editor.putBoolean(CONFIG, volumeChange)
         editor.apply()
     }
 
     override fun onDestroy() {
-
-        Log.w("Main Activity", "Inside onDestroy")
-
+        // Release player
         PlayerManager.releasePlayer()
-
+        // Release GPS
+        speedTracker.stopTrackingSpeed()
         super.onDestroy()
     }
 
     private fun getSongs(callback: (Songs) -> Unit) {
         // Make everything invisible except: Loading data...
         songRecyclerView.visibility = View.GONE
-        tvLoadingData.visibility = View.VISIBLE
         llCurrentPlaying.visibility = View.GONE
+        llTopMenu.visibility = View.GONE
+        tvLoadingData.visibility = View.VISIBLE
+
+        // Clear list of songs
         songList.clear()
 
         // Get the reference from the Firebase server
@@ -167,16 +189,21 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
+                    // Create an array of Media Items and set the player with the songs
                     val mediaItems = ArrayList<MediaItem>()
                     for (song in songList) {
                         mediaItems.add(MediaItem.Builder().setUri(song.getSongUrl()).setMimeType(MimeTypes.AUDIO_MP4).build())
                     }
                     player.setMediaItems(mediaItems)
 
+                    // Retrieve persistent data
                     val pref: SharedPreferences =
                         this@MainActivity.getSharedPreferences(this@MainActivity.packageName + "_preferences", Context.MODE_PRIVATE)
+                    volumeChange = pref.getBoolean(CONFIG, true)
+                    // Set the current song
                     player.seekToDefaultPosition(pref.getInt(CURRENT_SONG, DEFAULT_SONG))
 
+                    // Prepare the player
                     player.prepare()
                     player.pause()
                     // Update List of Songs (Recycler View)
@@ -198,6 +225,7 @@ class MainActivity : AppCompatActivity() {
         songRecyclerView.visibility = View.VISIBLE
         tvLoadingData.visibility = View.GONE
         llCurrentPlaying.visibility = View.VISIBLE
+        llTopMenu.visibility = View.VISIBLE
 
         // Update the visual list of songs
         songAdapter = SongAdapter(songList)
@@ -248,15 +276,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     //function that happens when the updateSpeedThread updates
-    private fun updateSpeedOnUI(speed: Float, audioManager: AudioManager, maxVolume: Int, currentVolume: Int) {
-//        Log.w("MainActivity", speed.toString())
+    private fun updateSpeedOnUI(speed: Float) {
+        Log.w("MainActivity", "Speed: $speed")
         // Use player.setDeviceVolume(4(whatever Int),0) to adjust the device volume
-        var newVolume:Int = (speed * (maxVolume / 5)).toInt()
-        if (newVolume >= (maxVolume * 3) / 4){
-            newVolume = ((maxVolume * 3) / 4)
-        } else if(newVolume == 0){
-            newVolume = 1
+        var newVolume:Int = (speed * maxVolume/2).toInt()
+        if (newVolume >= (maxVolume-2)){
+            newVolume = (maxVolume-2)
+        } else if(newVolume <= 2){
+            newVolume = 2
         }
+        Log.w("Main Activity", "New Volume: $newVolume")
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
     }
 
@@ -304,8 +333,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         var songList: Songs = Songs()
+        var volumeChange: Boolean = true
         const val MUSIC_ACTIVITY_REQUEST_CODE = 100
         const val DEFAULT_SONG = 0
         const val CURRENT_SONG: String = "currentSongIndex"
+        const val CONFIG: String = "volumeConfiguration"
     }
 }
