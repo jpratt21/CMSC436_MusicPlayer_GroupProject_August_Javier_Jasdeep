@@ -14,7 +14,7 @@ import com.google.android.gms.location.LocationServices
 class GPSSpeed (private val context: Context){
 
     private var classSpeed: Float = 0F
-
+    private var floatList: MutableList<Float> = mutableListOf()
 //the fusedLocationClient is the thing that actually gets the speed. relies on
 //    google services, extremely important
     private val fusedLocationClient: FusedLocationProviderClient =
@@ -39,7 +39,12 @@ class GPSSpeed (private val context: Context){
     }
 
     fun getSpeed(): Float {
-        return classSpeed
+        floatList.add(0, classSpeed)
+        if(floatList.size > 10){
+            floatList.removeAt(floatList.size - 1)
+        }
+
+        return floatList.average().toFloat()
     }
 
     fun startTrackingSpeed() {

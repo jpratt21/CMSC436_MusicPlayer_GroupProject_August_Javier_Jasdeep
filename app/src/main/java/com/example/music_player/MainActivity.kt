@@ -1,11 +1,15 @@
 package com.example.music_player
 
+//group members: August (James) Pratt, UID:118350172
+
+
 import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -29,6 +33,9 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.squareup.picasso.Picasso
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -61,6 +68,11 @@ class MainActivity : AppCompatActivity() {
         ibPlayPause = findViewById(R.id.ibPlayPause)
         llCurrentPlaying = findViewById(R.id.llCurrentPlaying)
 
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+
         speedTracker = GPSSpeed(this)
 
         // Once songs are loaded
@@ -80,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                 while (true) {
                     val speed = speedTracker.getSpeed()
                     runOnUiThread {
-                        updateSpeedOnUI(speed)
+                        updateSpeedOnUI(speed, audioManager, maxVolume, currentVolume)
                     }
                     Thread.sleep(1000)
                 }
@@ -236,9 +248,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     //function that happens when the updateSpeedThread updates
-    private fun updateSpeedOnUI(speed: Float) {
-        Log.w("MainActivity", speed.toString())
+    private fun updateSpeedOnUI(speed: Float, audioManager: AudioManager, maxVolume: Int, currentVolume: Int) {
+//        Log.w("MainActivity", speed.toString())
         // Use player.setDeviceVolume(4(whatever Int),0) to adjust the device volume
+        var newVolume:Int = (speed * (maxVolume / 5)).toInt()
+        if (newVolume >= (maxVolume * 3) / 4){
+            newVolume = ((maxVolume * 3) / 4)
+        } else if(newVolume == 0){
+            newVolume = 1
+        }
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
     }
 
     private fun checkPlayServices(): Boolean {

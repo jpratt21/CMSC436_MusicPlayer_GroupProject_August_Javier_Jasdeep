@@ -17,6 +17,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.squareup.picasso.Picasso
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
 
 class MusicActivity: AppCompatActivity() {
 
@@ -38,6 +40,8 @@ class MusicActivity: AppCompatActivity() {
 
     private var totalTime = 0
 
+    private lateinit var adView: AdView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_music)
@@ -58,6 +62,11 @@ class MusicActivity: AppCompatActivity() {
         position = findViewById(R.id.position)
 
         songList = MainActivity.songList
+
+        adView = findViewById<AdView>(R.id.adView)
+        var adRequest = AdRequest.Builder().build()
+        // Load the ad with the request.
+        adView.loadAd(adRequest)
 
         updateSongUI()
 
